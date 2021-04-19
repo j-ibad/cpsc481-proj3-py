@@ -11,6 +11,12 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
+'''
+Spring 2021 CPSC 481-04
+	Winnie Pan
+	Jianxi Xu
+	Josh Ibad
+'''
 
 from util import manhattanDistance
 from game import Directions
@@ -46,7 +52,7 @@ class ReflexAgent(Agent):
         bestScore = max(scores)
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
         chosenIndex = random.choice(bestIndices) # Pick randomly among the best
-
+        
         "Add more of your code here if you want to"
 
         return legalMoves[chosenIndex]
@@ -74,7 +80,46 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        if successorGameState.isWin():
+            return 10000000
+        
+        res = successorGameState.getScore()
+        
+        #Minimize distance from closest food = Give higher score for closer food
+        foodList = newFood.asList()
+        closestFood = None
+        closestFoodDist = 100
+        for foodItem in foodList:
+            tmpFoodDist = util.manhattanDistance(foodItem, newPos)
+            if tmpFoodDist < closestFoodDist:
+                closestFood = foodItem
+                closestFoodDist = tmpFoodDist
+        res -= closestFoodDist * 3
+        
+        #Higher score if pacman is eating in this state
+        if currentGameState.getNumFood() > successorGameState.getNumFood():
+            res += 100
+        
+        #Penalize for not moving
+        if action == Directions.STOP:
+            res -= 100
+        
+        #Try to eat capsule
+        capsuleList = currentGameState.getCapsules()
+        if successorGameState.getPacmanPosition() in capsuleList:
+            res += 100
+            
+        #If ghost is scared, try to it eat. Else, run from it
+        for i in range(0, len(newGhostStates)):
+            if newGhostStates[i].scaredTimer > 3:
+                res -= util.manhattanDistance(newGhostStates[i].getPosition, newPos)*5
+            else:
+                #ghostPos = currentGameState.getGhostPosition(i)
+                ghostPos = newGhostStates[i].getPosition()
+                ghostDist = util.manhattanDistance(ghostPos, newPos)
+                res += max(ghostDist, 3)
+        
+        return res
 
 def scoreEvaluationFunction(currentGameState):
     """
